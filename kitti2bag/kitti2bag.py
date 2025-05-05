@@ -129,7 +129,7 @@ def save_camera_data(bag, kitti_type, kitti, util, bridge, camera, camera_frame_
         
         calib = CameraInfo()
         calib.header.frame_id = camera_frame_id
-        calib.P = util['P{}'.format(camera_pad)]
+        # calib.P = util['P{}'.format(camera_pad)]
     
     iterable = zip(image_datetimes, image_filenames)
     bar = progressbar.ProgressBar()
@@ -389,3 +389,90 @@ def run_kitti2bag():
             print(bag)
             bag.close()
 
+
+
+def run_kitti2bag_bpod():
+    print("Starting converting...")
+    parser = argparse.ArgumentParser(description = "Convert KITTI dataset to ROS bag file the easy way!")
+    # odometry_sequences = []
+    # for s in range(22):
+    #     odometry_sequences.append(str(s).zfill(2))
+
+    parser.add_argument("dir", nargs = "?", default = os.getcwd(), help = "base directory of the dataset, if no directory passed the deafult is current working directory")
+    # parser.add_argument("-s", "--sequence", choices = odometry_sequences,help = "sequence of the odometry dataset (between 00 - 21), option is only for ODOMETRY datasets.")
+    args = parser.parse_args()
+
+    bridge = CvBridge()
+    compression = rosbag.Compression.NONE
+    # compression = rosbag.Compression.BZ2
+    # compression = rosbag.Compression.LZ4
+    
+    # CAMERAS
+    cameras = [
+        (0, 'camera_gray_left', '/kitti/camera_gray_left'),
+        (1, 'camera_gray_right', '/kitti/camera_gray_right'),
+        (2, 'camera_color_left', '/kitti/camera_color_left'),
+        (3, 'camera_color_right', '/kitti/camera_color_right')
+    ]
+    
+    # if args.sequence == None:
+    #     print("Sequence option is not given. It is mandatory for odometry dataset.")
+    #     print("Usage for odometry dataset: kitti2bag {odom_color, odom_gray} [dir] -s <sequence>")
+    #     sys.exit(1)
+        
+    bag = rosbag.Bag("bpod_kitti_data.bag", 'w', compression=compression)
+    
+    kitti = pykitti.odometry(args.dir, '00')
+    if not os.path.exists(kitti.sequence_path):
+        print('Path {} does not exists. Exiting.'.format(kitti.sequence_path))
+        sys.exit(1)
+
+    # kitti._load_calib()   
+    kitti.bpod_load_calib()      
+    kitti._load_timestamps() 
+            
+    if len(kitti.timestamps) == 0:
+        print('Dataset is empty? Exiting.')
+        sys.exit(1)
+        
+    # if args.sequence in odometry_sequences[:11]:
+    #     print("Odometry dataset sequence {} has ground truth information (poses).".format(args.sequence))
+    #     kitti.load_poses()
+
+    try:
+        util = pykitti.utils.read_calib_file(os.path.join(args.dir,'sequences','00', 'calib.txt'))
+        current_epoch = (datetime.utcnow() - datetime(1970, 1, 1)).total_seconds()
+        # Export
+        used_cameras = cameras[:2]
+
+        # save_dynamic_tf(bag, kitti, "odom_gray", initial_time=current_epoch)
+        for camera in used_cameras:
+            save_camera_data(bag, "odom_gray", kitti, util, bridge, camera=camera[0], camera_frame_id=camera[1], topic=camera[2], initial_time=current_epoch)
+
+    finally:
+        print("## OVERVIEW ##")
+        print(bag)
+        bag.close()
+
+if __name__ == '__main__':
+    run_kitti2bag_bpod()
+
+# Place this function in pykitti/odometry.py
+# def bpod_load_calib(self):
+#     """Load and compute intrinsic and extrinsic calibration parameters."""
+#     # We'll build the calibration parameters as a dictionary, then
+#     # convert it to a namedtuple to prevent it from being modified later
+#     data = {}
+
+#     # Load the calibration file
+#     calib_filepath = os.path.join(self.sequence_path, 'calib.txt')
+#     filedata = utils.read_calib_file(calib_filepath)
+
+#     # Compute the camera intrinsics
+#     data['K_cam0'] = np.reshape(filedata['K0'], (3, 3))
+#     data['K_cam1'] = np.reshape(filedata['K1'], (3, 3))
+
+#     # the stereo gray baseline in meters 
+#     data['b_gray'] = 0.095  # gray baseline
+
+#     self.calib = namedtuple('CalibData', data.keys())(*data.values())
