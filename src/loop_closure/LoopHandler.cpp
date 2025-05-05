@@ -62,8 +62,8 @@ void LoopHandler::savePose() {
 
   // Export the final pose graph
   std::ofstream sodso_file, dslam_file;
-  sodso_file.open("sodso.txt");
-  dslam_file.open("dslam.txt");
+  sodso_file.open("sodso_bpod.txt");          // Change Here
+  dslam_file.open("dslam_bpod.txt");          // Change Here
   sodso_file << std::setprecision(6);
   dslam_file << std::setprecision(6);
   for (auto &lf : loop_frames_) {
@@ -71,12 +71,17 @@ void LoopHandler::savePose() {
     sodso_file << lf->incoming_id << " ";
     sodso_file << t_wc(0) << " " << t_wc(1) << " " << t_wc(2) << std::endl;
 
-    t_wc = lf->tfm_w_c.translation();
+    auto t_r = (lf->tfm_w_c.rotation().normalized()).toRotationMatrix(); 
+    t_wc = lf->tfm_w_c.translation(); // 3d vector
     dslam_file << lf->incoming_id << " ";
-    dslam_file << t_wc(0) << " " << t_wc(1) << " " << t_wc(2) << std::endl;
+    // dslam_file << t_r.w() << " " << t_r.x() << " " << t_r.y() << " " << t_r.z() << " "; // t_r in quaternion (w, x, y, z)
+    dslam_file << t_r(0,0) << " " << t_r(0,1) << " " << t_r(0,2) << " " << t_wc(0) << " ";
+    dslam_file << t_r(1,0) << " " << t_r(1,1) << " " << t_r(1,2) << " " << t_wc(1) << " ";
+    dslam_file << t_r(2,0) << " " << t_r(2,1) << " " << t_r(2,2) << " " << t_wc(2) << std::endl;
   }
   sodso_file.close();
   dslam_file.close();
+  printf("Saved the results to files!\n");
 }
 
 LoopHandler::~LoopHandler() {

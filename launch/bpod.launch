@@ -1,0 +1,14 @@
+<launch>
+  <arg name="bag" default=""/>
+
+  <rosparam command="load" file="$(find direct_stereo_slam)/cams/bpod/T_stereo.yaml" ns="direct_stereo_slam"/>
+  <node name="direct_stereo_slam" pkg="direct_stereo_slam" type="slam_node" output="screen" required="true">
+    <param name="topic0" value="/kitti/camera_gray_left/image_rect" />
+    <param name="topic1" value="/kitti/camera_gray_right/image_rect" />
+    <param name="calib0" value="$(find direct_stereo_slam)/cams/bpod/camera0.txt" />
+    <param name="calib1" value="$(find direct_stereo_slam)/cams/bpod/camera1.txt" />
+    <param name="bag" value="$(arg bag)" />
+    <!-- <param name="scale_opt_thres" value="-1" /> -->
+  </node>
+
+</launch>

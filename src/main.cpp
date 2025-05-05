@@ -28,6 +28,8 @@
 #include "FrontEnd.h"
 #include "loop_closure/pangolin_viewer/PangolinLoopViewer.h"
 
+#include <filesystem>
+
 inline void print_average(const std::string &name, const TimeVector &tm_vec) {
   float sum = 0;
   for (size_t i = 0; i < tm_vec.size(); i++) {
@@ -203,9 +205,11 @@ SLAMNode::~SLAMNode() {
   delete undistorter0_;
   delete undistorter1_;
   delete loop_handler_;
-  for (auto &ow : front_end_->output_wrapper_) {
+  std::cout << "c" << std::endl;
+  for (auto &ow : front_end_->output_wrapper_) { // Output3DWrapper in DSO
     delete ow;
   }
+  std::cout << "d" << std::endl;
   delete front_end_;
 }
 
@@ -218,8 +222,13 @@ void SLAMNode::imageMessageCallback(const sensor_msgs::ImageConstPtr &msg0,
   } catch (cv_bridge::Exception &e) {
     ROS_ERROR("cv_bridge exception: %s", e.what());
   }
+  
+  static int count = 0;
+  printf("Image %i\n", ++count);
 
   // detect if a new sequence is received, restart if so
+  // std::cout << "currentTimeStamp: " << currentTimeStamp << std::endl;
+  // std::cout << "msgs stamp: " << msg0->header.stamp.toSec() << std::endl;
   if (currentTimeStamp > 0 &&
       fabs(msg0->header.stamp.toSec() - currentTimeStamp) > 10) {
     front_end_->is_lost_ = true;
@@ -227,6 +236,8 @@ void SLAMNode::imageMessageCallback(const sensor_msgs::ImageConstPtr &msg0,
   currentTimeStamp = msg0->header.stamp.toSec();
 
   // reinitialize if necessary
+  // if (front_end_->init_failed_) printf("Init failed\n");
+  // if (front_end_->is_lost_) printf("Currently lost\n");
   if (front_end_->init_failed_ || front_end_->is_lost_) {
     auto lastPose = front_end_->cur_pose_;
     int existing_kf_size = front_end_->getTotalKFSize();
@@ -310,6 +321,7 @@ int main(int argc, char **argv) {
   // read from a bag file
   std::string bag_path;
   nhPriv.param<std::string>("bag", bag_path, "");
+  std::cout << "bag_path: " << bag_path << std::endl;
 
   /* ******************************************************************** */
 
@@ -320,6 +332,7 @@ int main(int argc, char **argv) {
   if (!bag_path.empty()) {
 
     rosbag::Bag bag;
+    // std::cout << __cplusplus << std::endl;
     bag.open(bag_path, rosbag::bagmode::Read);
     std::vector<std::string> topics = {topic0, topic1};
     rosbag::View view(bag, rosbag::TopicQuery(topics));
@@ -342,6 +355,7 @@ int main(int argc, char **argv) {
         img0_updated = img1_updated = false;
       }
     }
+    std::cout << "END" << std::endl;
     bag.close();
   } else {
 
