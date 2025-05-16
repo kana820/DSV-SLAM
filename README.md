@@ -1,3 +1,14 @@
+## To run on BPOD
+1. Convert the sequence to a ROS bag using kitti2bag
+```
+kitti2bag -s [sequence] odom_gray .
+```
+2. Source catkin_ws/devel/setup.bash
+3. ROS launch
+```
+roslaunch direct_stereo_slam [launch file] [bag(absolute path):="" seq:=""]
+```
+
 # Fast Direct Stereo Visual SLAM
 ## Related Publications
 - **Direct Sparse Odometry**, J. Engel, V. Koltun, D. Cremers, In IEEE Transactions on Pattern Analysis and Machine Intelligence (PAMI), 2018
